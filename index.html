@@ -160,7 +160,7 @@ $('#go').onclick=async()=>{
     if(!d||d.error){status(d&&d.error||'I couldn’t find food in that photo. Try another.',true);return}
     status('');mode==='fridge'?renderFridge(d):renderDish(d);
   }catch(e){
-    console.error(e);status('Something went wrong. Please try again.',true);
+    console.error(e);status('Something went wrong, or the free limit was reached. Wait a minute and try again.',true);
   }finally{$('#go').disabled=!blobs.length}
 };
 </script>
