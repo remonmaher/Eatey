@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>Larder: photo to recipe</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
-<link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,400;0,9..144,600;1,9..144,400&family=DM+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,400;0,9..144,600;1,9..144,400&family=DM+Sans:wght@400;500;600&display=swap" media="print" onload="this.media='all'">
 <style>
 :root{--bg:#f4efe6;--card:#fbf8f2;--ink:#1f2a24;--mute:#6b7469;--line:#ddd5c6;--accent:#d2461f;--green:#2f5d46;--chip:#e7e0d1;
 box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
@@ -96,18 +96,19 @@ function setMode(m){
 $('#t-fridge').onclick=()=>setMode('fridge');
 $('#t-dish').onclick=()=>setMode('dish');
 
+function loadImg(file){return new Promise((res,rej)=>{const u=URL.createObjectURL(file);const i=new Image();i.onload=()=>{URL.revokeObjectURL(u);res(i)};i.onerror=()=>rej(new Error('img'));i.src=u})}
 async function shrink(file){
-  const bmp=await createImageBitmap(file);
-  const k=Math.min(1,1024/Math.max(bmp.width,bmp.height));
-  const c=document.createElement('canvas');c.width=bmp.width*k;c.height=bmp.height*k;
-  c.getContext('2d').drawImage(bmp,0,0,c.width,c.height);
-  return new Promise(r=>c.toBlob(r,'image/jpeg',.82));
+  const img=await loadImg(file);
+  const w=img.naturalWidth,h=img.naturalHeight,k=Math.min(1,1024/Math.max(w,h));
+  const c=document.createElement('canvas');c.width=Math.round(w*k);c.height=Math.round(h*k);
+  c.getContext('2d').drawImage(img,0,0,c.width,c.height);
+  return new Promise((r,j)=>c.toBlob(b=>b?r(b):j(new Error('blob')),'image/jpeg',.8));
 }
 $('#file').onchange=async e=>{
   const list=[...e.target.files].slice(0,mode==='fridge'?4:1);
   blobs=[];$('#thumbs').replaceChildren();
   for(const f of list){
-    try{const b=await shrink(f);blobs.push(b);const i=new Image();i.src=URL.createObjectURL(b);i.alt='Selected photo';$('#thumbs').append(i)}catch(_){}
+    try{const b=await shrink(f);blobs.push(b);const i=new Image();i.src=URL.createObjectURL(b);i.alt='Selected photo';$('#thumbs').append(i)}catch(_){status('I couldn’t read that photo. Try another one.',true)}
   }
   $('#go').disabled=!blobs.length;
 };
@@ -154,13 +155,14 @@ $('#go').onclick=async()=>{
       ?'You are a friendly home chef. Look at the attached fridge/pantry photos. Identify the food items you can actually see. Then suggest 4 realistic recipes using mostly those items (assume salt, pepper, oil and water). Return ONLY JSON: {"ingredients":[string],"recipes":[{"name":string,"time":string,"difficulty":"Easy|Medium|Hard","uses":[string],"missing":[string],"steps":[string]}]}. Steps must be clear, specific and 5 to 9 per recipe. If there is no food, return {"error":"short explanation"}.'
       :'You are a professional chef. Identify the dish or dessert in the attached photo and write a complete home recipe. Return ONLY JSON: {"name":string,"cuisine":string,"time":string,"servings":number,"ingredients":[{"amount":string,"item":string}],"steps":[string],"tip":string}. Steps must be clear and specific, with temperatures and times. If the photo shows no food, return {"error":"short explanation"}.';
     const images=await Promise.all(blobs.map(b=>new Promise(r=>{const f=new FileReader();f.onload=()=>r(f.result.split(',')[1]);f.readAsDataURL(b)})));
-    const res=await fetch('/.netlify/functions/ai',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({prompt,images})});
+    const ac=new AbortController();const to=setTimeout(()=>ac.abort(),45000);
+    const res=await fetch('/.netlify/functions/ai',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({prompt,images}),signal:ac.signal});clearTimeout(to);
     if(!res.ok)throw new Error('server '+res.status);
     const d=await res.json();
     if(!d||d.error){status(d&&d.error||'I couldn’t find food in that photo. Try another.',true);return}
     status('');mode==='fridge'?renderFridge(d):renderDish(d);
   }catch(e){
-    console.error(e);status('Something went wrong, or the free limit was reached. Wait a minute and try again.',true);
+    console.error(e);status(e&&e.name==='AbortError'?'That took too long. Try one smaller photo.':'Something went wrong, or the free limit was reached. Wait a minute and try again.',true);
   }finally{$('#go').disabled=!blobs.length}
 };
 </script>
