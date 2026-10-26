@@ -23,7 +23,7 @@ exports.handler = async (event) => {
             { text: prompt }
           ]
         }],
-        generationConfig: { responseMimeType: 'application/json', maxOutputTokens: 4000 }
+        generationConfig: { responseMimeType: 'application/json', maxOutputTokens: 4000, thinkingConfig: { thinkingBudget: 0 } }
       })
     });
     const j = await r.json();
