@@ -4,8 +4,6 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>Larder: photo to recipe</title>
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,400;0,9..144,600;1,9..144,400&family=DM+Sans:wght@400;500;600&display=swap" media="print" onload="this.media='all'">
 <style>
 :root{--bg:#f4efe6;--card:#fbf8f2;--ink:#1f2a24;--mute:#6b7469;--line:#ddd5c6;--accent:#d2461f;--green:#2f5d46;--chip:#e7e0d1;
 box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
@@ -13,28 +11,28 @@ box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:en
 :root[data-theme="dark"]{--bg:#141a16;--card:#1c241f;--ink:#efe9dc;--mute:#97a193;--line:#2d3830;--accent:#ff7a52;--green:#8fcfa8;--chip:#26302a;color-scheme:dark}
 *{box-sizing:border-box}
 html,body{margin:0}
-body{background:var(--bg);color:var(--ink);font:16px/1.55 'DM Sans',system-ui,sans-serif;min-height:100%}
+body{background:var(--bg);color:var(--ink);font:16px/1.55 system-ui,-apple-system,'Segoe UI',sans-serif;min-height:100%}
 .wrap{max-width:880px;margin:0 auto;padding:28px 20px 80px}
 header{display:flex;justify-content:space-between;align-items:baseline;border-bottom:1.5px solid var(--ink);padding-bottom:10px}
-.logo{font:600 26px 'Fraunces',Georgia,serif;letter-spacing:-.02em}
+.logo{font:600 26px ui-serif,'Iowan Old Style','Palatino Linotype',Georgia,serif;letter-spacing:-.02em}
 .logo i{color:var(--accent);font-style:italic}
 .tag{font-size:12px;letter-spacing:.14em;text-transform:uppercase;color:var(--mute)}
-h1{font:400 clamp(38px,8vw,68px)/1.02 'Fraunces',Georgia,serif;letter-spacing:-.03em;margin:38px 0 12px}
+h1{font:400 clamp(38px,8vw,68px)/1.02 ui-serif,'Iowan Old Style','Palatino Linotype',Georgia,serif;letter-spacing:-.03em;margin:38px 0 12px}
 h1 em{color:var(--accent)}
 .lead{color:var(--mute);max-width:520px;margin:0 0 28px}
 .tabs{display:grid;grid-template-columns:1fr 1fr;border:1.5px solid var(--ink);border-radius:999px;padding:4px;max-width:440px;margin-bottom:18px}
-.tabs button{border:0;background:none;color:var(--ink);font:500 15px 'DM Sans',sans-serif;padding:10px 12px;border-radius:999px;cursor:pointer}
+.tabs button{border:0;background:none;color:var(--ink);font:500 15px system-ui,-apple-system,'Segoe UI',sans-serif;padding:10px 12px;border-radius:999px;cursor:pointer}
 .tabs button[aria-selected="true"]{background:var(--ink);color:var(--bg)}
 .drop{display:block;border:1.5px dashed var(--mute);border-radius:20px;background:var(--card);padding:34px 20px;text-align:center;cursor:pointer;transition:.2s}
 .drop:hover{border-color:var(--accent);transform:translateY(-1px)}
-.drop b{font:600 22px 'Fraunces',Georgia,serif;display:block;margin-bottom:4px}
+.drop b{font:600 22px ui-serif,'Iowan Old Style','Palatino Linotype',Georgia,serif;display:block;margin-bottom:4px}
 .drop span{color:var(--mute);font-size:14px}
 .drop input{display:none}
 .thumbs{display:flex;gap:10px;flex-wrap:wrap;margin-top:14px}
 .thumbs img{width:84px;height:84px;object-fit:cover;border-radius:14px;border:1px solid var(--line)}
-.go{margin-top:18px;border:0;background:var(--accent);color:#fff;font:600 16px 'DM Sans',sans-serif;padding:14px 26px;border-radius:999px;cursor:pointer}
+.go{margin-top:18px;border:0;background:var(--accent);color:#fff;font:600 16px system-ui,-apple-system,'Segoe UI',sans-serif;padding:14px 26px;border-radius:999px;cursor:pointer}
 .go:disabled{opacity:.4;cursor:not-allowed}
-.status{margin-top:22px;color:var(--mute);font-style:italic;font-family:'Fraunces',Georgia,serif;font-size:20px}
+.status{margin-top:22px;color:var(--mute);font-style:italic;font-family:ui-serif,'Iowan Old Style','Palatino Linotype',Georgia,serif;font-size:20px}
 .err{color:var(--accent)}
 #out{margin-top:36px}
 .sec{font-size:12px;letter-spacing:.14em;text-transform:uppercase;color:var(--mute);margin:0 0 10px}
@@ -43,12 +41,12 @@ h1 em{color:var(--accent)}
 .chip.miss{background:none;border:1px dashed var(--accent);color:var(--accent)}
 .card{background:var(--card);border:1px solid var(--line);border-radius:22px;padding:24px;margin-bottom:18px;animation:up .5s both}
 @keyframes up{from{opacity:0;transform:translateY(10px)}}
-.card h2{font:600 28px/1.15 'Fraunces',Georgia,serif;letter-spacing:-.02em;margin:0 0 6px}
+.card h2{font:600 28px/1.15 ui-serif,'Iowan Old Style','Palatino Linotype',Georgia,serif;letter-spacing:-.02em;margin:0 0 6px}
 .meta{color:var(--mute);font-size:14px;margin-bottom:14px}
 .meta span+span::before{content:"·";margin:0 8px}
 ol{margin:12px 0 0;padding:0;list-style:none;counter-reset:s}
 ol li{counter-increment:s;position:relative;padding:10px 0 10px 46px;border-top:1px solid var(--line)}
-ol li::before{content:counter(s);position:absolute;left:0;top:8px;width:30px;height:30px;border-radius:50%;background:var(--green);color:var(--bg);display:grid;place-items:center;font:600 14px 'Fraunces',serif}
+ol li::before{content:counter(s);position:absolute;left:0;top:8px;width:30px;height:30px;border-radius:50%;background:var(--green);color:var(--bg);display:grid;place-items:center;font:600 14px ui-serif,'Iowan Old Style','Palatino Linotype',Georgia,serif}
 ul.ing{list-style:none;margin:0 0 6px;padding:0;columns:2;gap:24px}
 ul.ing li{padding:5px 0;border-bottom:1px solid var(--line);break-inside:avoid}
 ul.ing b{font-weight:600}
@@ -77,7 +75,7 @@ details summary{cursor:pointer;font-weight:600;color:var(--green);margin-top:12p
 <button class="go" id="go" disabled>Cook something up</button>
 <div class="status" id="status" hidden></div>
 <div id="out"></div>
-<p style="font-size:13px;color:var(--mute);margin-top:40px">Trouble? <a style="color:var(--green)" href="/.netlify/functions/ai">Test the server</a></p>
+<p style="font-size:13px;color:var(--mute);margin-top:40px">Trouble? <a style="color:var(--green)" href="/.netlify/functions/ai">Test the server</a> · v4</p>
 </div>
 
 <script>
