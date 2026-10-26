@@ -77,9 +77,11 @@ details summary{cursor:pointer;font-weight:600;color:var(--green);margin-top:12p
 <button class="go" id="go" disabled>Cook something up</button>
 <div class="status" id="status" hidden></div>
 <div id="out"></div>
+<p style="font-size:13px;color:var(--mute);margin-top:40px">Trouble? <a style="color:var(--green)" href="/.netlify/functions/ai">Test the server</a></p>
 </div>
 
 <script>
+window.addEventListener('error',e=>{try{status('Page error: '+e.message,true)}catch(_){}});
 const $=s=>document.querySelector(s);
 let mode='fridge',blobs=[];
 function h(tag,cls,text){const e=document.createElement(tag);if(cls)e.className=cls;if(text!=null)e.textContent=text;return e}
@@ -99,10 +101,10 @@ $('#t-dish').onclick=()=>setMode('dish');
 function loadImg(file){return new Promise((res,rej)=>{const u=URL.createObjectURL(file);const i=new Image();i.onload=()=>{URL.revokeObjectURL(u);res(i)};i.onerror=()=>rej(new Error('img'));i.src=u})}
 async function shrink(file){
   const img=await loadImg(file);
-  const w=img.naturalWidth,h=img.naturalHeight,k=Math.min(1,1024/Math.max(w,h));
+  const w=img.naturalWidth,h=img.naturalHeight,k=Math.min(1,900/Math.max(w,h));
   const c=document.createElement('canvas');c.width=Math.round(w*k);c.height=Math.round(h*k);
   c.getContext('2d').drawImage(img,0,0,c.width,c.height);
-  return new Promise((r,j)=>c.toBlob(b=>b?r(b):j(new Error('blob')),'image/jpeg',.8));
+  return new Promise((r,j)=>c.toBlob(b=>b?r(b):j(new Error('blob')),'image/jpeg',.75));
 }
 $('#file').onchange=async e=>{
   const list=[...e.target.files].slice(0,mode==='fridge'?4:1);
@@ -157,12 +159,12 @@ $('#go').onclick=async()=>{
     const images=await Promise.all(blobs.map(b=>new Promise(r=>{const f=new FileReader();f.onload=()=>r(f.result.split(',')[1]);f.readAsDataURL(b)})));
     const ac=new AbortController();const to=setTimeout(()=>ac.abort(),45000);
     const res=await fetch('/.netlify/functions/ai',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({prompt,images}),signal:ac.signal});clearTimeout(to);
-    if(!res.ok)throw new Error('server '+res.status);
+    if(!res.ok){let m='';try{m=(await res.json()).error}catch(_){}throw new Error(m||('Server error '+res.status+(res.status>=502?' (the server took too long)':'')))}
     const d=await res.json();
     if(!d||d.error){status(d&&d.error||'I couldn’t find food in that photo. Try another.',true);return}
     status('');mode==='fridge'?renderFridge(d):renderDish(d);
   }catch(e){
-    console.error(e);status(e&&e.name==='AbortError'?'That took too long. Try one smaller photo.':'Something went wrong, or the free limit was reached. Wait a minute and try again.',true);
+    console.error(e);status(e&&e.name==='AbortError'?'That took too long. Try one smaller photo.':'Problem: '+((e&&e.message)||'unknown'),true);
   }finally{$('#go').disabled=!blobs.length}
 };
 </script>
