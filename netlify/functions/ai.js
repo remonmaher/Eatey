@@ -1,43 +1,60 @@
 // Server-side function: keeps your free Gemini API key secret.
-// Set GEMINI_API_KEY in Netlify. (Optional: GEMINI_MODEL to change the model.)
+const MODELS = [process.env.GEMINI_MODEL, 'gemini-2.5-flash', 'gemini-2.5-flash-lite'].filter(Boolean);
+const reply = (code, obj) => ({ statusCode: code, headers: { 'content-type': 'application/json' }, body: JSON.stringify(obj) });
+
+async function ask(model, key, parts, noThinking) {
+  const generationConfig = { responseMimeType: 'application/json', maxOutputTokens: 4000 };
+  if (noThinking) generationConfig.thinkingConfig = { thinkingBudget: 0 };
+  const r = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent`, {
+    method: 'POST',
+    headers: { 'content-type': 'application/json', 'x-goog-api-key': key },
+    body: JSON.stringify({ contents: [{ parts }], generationConfig })
+  });
+  return { r, j: await r.json().catch(() => ({})) };
+}
+
 exports.handler = async (event) => {
-  if (event.httpMethod !== 'POST') return { statusCode: 405, body: 'Method not allowed' };
+  const key = process.env.GEMINI_API_KEY;
+
+  // Open /.netlify/functions/ai in a browser to run this check.
+  if (event.httpMethod === 'GET')
+    return reply(200, { ok: true, keyIsSet: !!key, keyLength: key ? key.length : 0, models: MODELS });
+
+  if (event.httpMethod !== 'POST') return reply(405, { error: 'Method not allowed' });
+  if (!key) return reply(500, { error: 'GEMINI_API_KEY is not set in Netlify. Add it, then redeploy.' });
+
   try {
     const { prompt, images } = JSON.parse(event.body || '{}');
     if (!prompt || !Array.isArray(images) || images.length === 0 || images.length > 4)
-      return { statusCode: 400, body: JSON.stringify({ error: 'Bad request' }) };
+      return reply(400, { error: 'Bad request (no photo received).' });
 
-    const model = process.env.GEMINI_MODEL || 'gemini-2.5-flash';
-    const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent`;
+    const parts = [
+      ...images.map(data => ({ inline_data: { mime_type: 'image/jpeg', data } })),
+      { text: prompt }
+    ];
 
-    const r = await fetch(url, {
-      method: 'POST',
-      headers: {
-        'content-type': 'application/json',
-        'x-goog-api-key': process.env.GEMINI_API_KEY
-      },
-      body: JSON.stringify({
-        contents: [{
-          parts: [
-            ...images.map(data => ({ inline_data: { mime_type: 'image/jpeg', data } })),
-            { text: prompt }
-          ]
-        }],
-        generationConfig: { responseMimeType: 'application/json', maxOutputTokens: 4000, thinkingConfig: { thinkingBudget: 0 } }
-      })
-    });
-    const j = await r.json();
-    if (!r.ok) {
-      console.error('Gemini error', JSON.stringify(j));
-      return { statusCode: r.status === 429 ? 429 : 502, body: JSON.stringify({ error: j.error?.message || 'AI error' }) };
+    let lastErr = 'Unknown AI error';
+    for (const model of MODELS) {
+      for (const noThinking of [true, false]) {
+        const { r, j } = await ask(model, key, parts, noThinking);
+        if (r.ok) {
+          const cand = j.candidates && j.candidates[0];
+          const text = ((cand && cand.content && cand.content.parts) || []).map(p => p.text || '').join('');
+          const s = text.indexOf('{'), e = text.lastIndexOf('}');
+          if (s < 0) { lastErr = 'AI gave no answer' + (cand && cand.finishReason ? ' (' + cand.finishReason + ')' : ''); continue; }
+          try { return reply(200, JSON.parse(text.slice(s, e + 1))); }
+          catch (_) { lastErr = 'AI answer could not be read'; continue; }
+        }
+        lastErr = (j.error && j.error.message) || ('AI status ' + r.status);
+        console.error('Gemini', model, r.status, lastErr);
+        if (r.status === 429) return reply(429, { error: 'Free limit reached. Wait a minute. (' + lastErr + ')' });
+        if (r.status === 401 || r.status === 403 || /API key/i.test(lastErr)) return reply(r.status, { error: 'Key problem: ' + lastErr });
+        if (r.status !== 400) break; // 400 = retry without thinking option; others = next model
+      }
     }
-
-    const text = (j.candidates?.[0]?.content?.parts || []).map(p => p.text || '').join('');
-    const start = text.indexOf('{'), end = text.lastIndexOf('}');
-    const json = JSON.parse(text.slice(start, end + 1));
-    return { statusCode: 200, headers: { 'content-type': 'application/json' }, body: JSON.stringify(json) };
-  } catch (e) {
-    console.error(e);
-    return { statusCode: 500, body: JSON.stringify({ error: 'Server error' }) };
+    return reply(502, { error: lastErr });
+  } catch (err) {
+    console.error(err);
+    return reply(500, { error: 'Server error: ' + err.message });
   }
 };
